@@ -12,9 +12,9 @@ interface ApiService {
     // Use your own api key
     @Headers("x-api-key: " + BuildConfig.API_KEY)
     @POST("v2/movies")
-    suspend fun sendProject(@Body body: RequestBody): String
+    suspend fun renderProject(@Body body: RequestBody): String
 
     @Headers("x-api-key: " + BuildConfig.API_KEY)
     @GET("v2/movies")
-    suspend fun getProject(@Query("project") projectId: String): String
+    suspend fun getStatus(@Query("project") projectHashcode: String): String
 }
