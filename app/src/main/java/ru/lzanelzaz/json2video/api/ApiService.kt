@@ -7,6 +7,7 @@ import retrofit2.http.Headers
 import retrofit2.http.POST
 import retrofit2.http.Query
 import ru.lzanelzaz.json2video.BuildConfig
+import ru.lzanelzaz.json2video.model.Status
 
 interface ApiService {
     // Use your own api key
@@ -16,5 +17,5 @@ interface ApiService {
 
     @Headers("x-api-key: " + BuildConfig.API_KEY)
     @GET("v2/movies")
-    suspend fun getStatus(@Query("project") projectHashcode: String): String
+    fun getStatus(@Query("project") projectHashcode: String): Status
 }

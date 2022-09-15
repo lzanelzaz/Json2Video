@@ -22,8 +22,10 @@ object RepositoryModule {
     @Singleton
     fun provideAppRepository(
         apiService: ApiService,
-        projectsDao: ProjectsDao
-    ): AppRepository = AppRepository(apiService = apiService, projectsDao = projectsDao)
+        projectsDao: ProjectsDao,
+        @ApplicationContext appContext: Context
+    ): AppRepository =
+        AppRepository(apiService = apiService, projectsDao = projectsDao, appContext = appContext)
 
     @Provides
     @Singleton
