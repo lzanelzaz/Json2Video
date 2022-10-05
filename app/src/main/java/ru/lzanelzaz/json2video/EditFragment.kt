@@ -10,8 +10,11 @@ import androidx.fragment.app.Fragment
 import androidx.fragment.app.viewModels
 import com.google.firebase.ktx.Firebase
 import com.google.firebase.storage.ktx.storage
+import dagger.hilt.android.AndroidEntryPoint
 import java.text.DateFormat
+import java.util.Locale
 
+@AndroidEntryPoint
 class EditFragment : Fragment() {
 
     companion object {
@@ -29,19 +32,21 @@ class EditFragment : Fragment() {
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
-        val projectId =
-            DateFormat.getDateTimeInstance().format(System.currentTimeMillis()).toString()
-                .replace(" ", "")
 
-        val pickMedia =
-            registerForActivityResult(ActivityResultContracts.PickMultipleVisualMedia(5)) { uris ->
-                uris.forEach { uri ->
-                    val resName = uri.path.toString().let { it.substring(it.lastIndexOf('/') + 1) }
+        val timestamp =
+            DateFormat.getDateTimeInstance(DateFormat.SHORT, DateFormat.DEFAULT, Locale("ru_RU"))
+                .format(System.currentTimeMillis())
+                .toString()
+                .replace(" ", "_")
 
-                    Firebase.storage.reference.child("$projectId/$resName").putFile(uri)
-                }
+        registerForActivityResult(ActivityResultContracts.PickMultipleVisualMedia()) { uris ->
+            val projectId = timestamp + "_" + uris.size
+            uris.forEachIndexed { index, uri ->
+                Firebase.storage.reference.child("$projectId/$index")
+                    .putFile(uri)
             }
+            //viewModel.onCreateProject(projectId)
+        }.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageAndVideo))
 
-        pickMedia.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageAndVideo))
     }
 }

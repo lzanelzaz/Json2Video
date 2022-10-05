@@ -6,6 +6,9 @@ import android.content.Context
 import android.net.Uri
 import android.os.Environment
 import android.provider.MediaStore
+import android.util.Log
+import com.google.firebase.ktx.Firebase
+import com.google.firebase.storage.ktx.storage
 import com.google.gson.Gson
 import okhttp3.MediaType
 import okhttp3.RequestBody
@@ -24,40 +27,48 @@ class AppRepository @Inject constructor(
     private val projectsDao: ProjectsDao,
     private val appContext: Context
 ) {
-    fun createProject(): Project {
-        val src1 = "https://assets.json2video.com/assets/videos/beach-01.mp4"
-        val src2 = "https://assets.json2video.com/assets/videos/beach-02.mp4"
-        return Project(
-            resolution = Resolution.FULL_HD.stringValue,
-            scenes = listOf(
-                Scenes(comment = "Scene #1", elements = listOf(Video(src = src1))),
-                Scenes(elements = listOf(Video(src = src2)))
-            )
-        )
+    fun createProject(projectId: String) {
+        val baseUrl =
+            "https://firebasestorage.googleapis.com/v0/b/json2video-62dc8.appspot.com/o/"
+        val srcList: List<String> = List(projectId.takeLastWhile { it != '_' }.toInt()) {
+            baseUrl + "$projectId%2F$it".replace(":", "%3A") + "?alt=media"
+        }
+
+        val project = makeProject(srcList)
+        Log.d("project", project.toString())
+        val hashcode = getHashcode(project)
+//        projectsDao.addProject(
+//            projectId = projectId,
+//            hashcode = hashcode,
+//            project = project.toString()
+//        )
+        downloadProject(hashcode)
     }
 
-    suspend fun renderProject(project: Project): String {
+    private fun makeProject(srcList: List<String>) = Project(
+        resolution = Resolution.FULL_HD.stringValue,
+        scenes = srcList.map { Scenes(elements = listOf(Video(src = it))) }
+    )
+
+    private fun getHashcode(project: Project): String {
         val body = RequestBody.create(
             MediaType.parse("application/json"),
             Gson().toJson(project)
         )
-        return apiService.renderProject(body)
+        return apiService.getHashcode(body)
     }
 
-    fun addProjectToDb() {
-        //"success": true
-        TODO("apiService.getStatus()")
-        //project -> hashcode
-        TODO("renderProject()")
-        //movie -> url
-        TODO("projectsDao.addProject()")
+    fun getProject(hashcode: String): String = projectsDao.getProject(hashcode)
+
+    fun deleteProject(projectId: String) {
+        projectsDao.deleteProject(projectId)
+        Firebase.storage.reference.child(projectId).delete()
     }
 
-    fun downloadProject(projectHashcode: String) {
-        val fileName = "$projectHashcode.mp4"
+    private fun downloadProject(hashcode: String) {
+        val fileName = "$hashcode.mp4"
 
-        val url = projectsDao.getUrl(projectHashcode)
-        val video = apiService.getStatus(projectHashcode).movie
+        val video = apiService.getStatus(hashcode).movie
 
         val contentValues = ContentValues().apply {
             put(MediaStore.MediaColumns.DISPLAY_NAME, fileName)
@@ -76,7 +87,7 @@ class AppRepository @Inject constructor(
         }
         appContext.contentResolver.insert(MediaStore.Downloads.EXTERNAL_CONTENT_URI, contentValues)
 
-        val request = DownloadManager.Request(Uri.parse(url))
+        val request = DownloadManager.Request(Uri.parse(video.url))
             .setTitle(fileName)
             .setDescription("Downloading...")
             .setMimeType("video/mp4")
@@ -87,4 +98,5 @@ class AppRepository @Inject constructor(
             appContext.getSystemService(Context.DOWNLOAD_SERVICE) as DownloadManager
         manager.enqueue(request)
     }
+
 }

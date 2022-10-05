@@ -13,7 +13,7 @@ interface ApiService {
     // Use your own api key
     @Headers("x-api-key: " + BuildConfig.API_KEY)
     @POST("v2/movies")
-    suspend fun renderProject(@Body body: RequestBody): String
+    fun getHashcode(@Body body: RequestBody): String
 
     @Headers("x-api-key: " + BuildConfig.API_KEY)
     @GET("v2/movies")
